@@ -1,0 +1,77 @@
+Role: Act as a Principal Full-Stack Software Engineer, WebGL/Three.js Specialist, and Web3 Integrator specializing in Neurotech.
+
+Project Overview: Build "NeuroSim Web3", a full-stack educational platform for interactive 3D brain anatomy exploration and neurosurgery simulation.
+
+Architecture & Tech Stack:
+
+Frontend: Vite, React (TypeScript), Tailwind CSS, shadcn/ui.
+
+Animations: animejs (and @types/animejs). Use this exclusively for all UI transitions and 3D property animations (e.g., lerping camera positions, fading mesh opacities).
+
+3D Engine: @react-three/fiber and @react-three/drei.
+
+Backend: Node.js, Express, CORS, dotenv.
+
+Database: MongoDB Atlas.
+
+Authentication: Auth0 (@auth0/auth0-react & Express middleware).
+
+Web3: Solana (@solana/web3.js, @solana/wallet-adapter-react).
+
+Strict Security Directives:
+
+NEVER expose API keys in the frontend code.
+
+All calls to Snowflake, Gemini (Gemma 4), and ElevenLabs MUST be securely routed through the Node.js backend.
+
+Expect all API keys to be provided in a root .env file. Do not mock API keys; use process.env.
+
+Integration Requirements (Hackathon Sponsors):
+
+Auth0 AI Agents: Secure the main application and manage agent-to-user interactions. Only authenticated users can access the simulator, and the backend must verify the Auth0 token before allowing the AI Mentor to access the user's specific progress data.
+
+MongoDB Atlas: Create a NeuroProgress Mongoose schema to store user profiles, quiz scores, and surgical milestones (e.g., "Craniotomy: 100%").
+
+Snowflake API (RAG Data): Create an Express route /api/neuro-data that uses a single CURL/REST call to Snowflake's API to retrieve complex neurological textbook context (RAG) when a user clicks a specific brain structure.
+
+Gemma 4 (via Gemini API): Create a conversational endpoint /api/mentor utilizing Google's Gemma 4 open-weight model. This acts as the "Chief Neurosurgeon AI Agent," analyzing the user's surgical choices and feeding off the context provided by Snowflake.
+
+ElevenLabs: Create an endpoint /api/audio-guide that takes the Gemma 4 text response and streams a dynamic, human-sounding audio voice to guide the user through high-stress surgical steps.
+
+Solana: Build a Web3 utility to leverage Solana's blazing-fast, zero-cost transactions. When a user completes a surgery, mint a "Certified Virtual Neurosurgeon" on-chain certificate/NFT on the Devnet.
+
+Execution Phases (Execute sequentially. Await my approval before moving to the next phase):
+
+Phase 1: Foundation, Auth0 & Anime.js Setup
+
+Initialize the React frontend and Express backend.
+
+Set up Tailwind, shadcn/ui, and install animejs.
+
+Implement Auth0 login and protect backend routes, specifically securing the AI agent endpoints.
+
+Create a custom React hook for Anime.js to handle smooth, clinical UI entrances (sliding panels, fading modals).
+
+Phase 2: Backend AI & Data Middleware
+
+Connect to MongoDB Atlas.
+
+Write the Express routes for the Snowflake REST API, Gemini (Gemma 4), and ElevenLabs. Ensure they pipeline correctly (Snowflake context -> Gemma 4 -> ElevenLabs audio).
+
+Phase 3: The 3D Brain Engine & Animations
+
+Build a full-screen React Three Fiber canvas with OrbitControls.
+
+Load /public/models/brain.glb.
+
+Anime.js 3D Logic: Implement raycasting. When a user clicks the frontal lobe, use Anime.js to smoothly lerp the camera focus. Add a UI toggle to "Hide Skull" that uses Anime.js to animate the skull mesh's material opacity to 0.
+
+Mesh selection must trigger the /api/neuro-data (Snowflake) and /api/mentor (Gemma 4) routes.
+
+Phase 4: Neurosurgery Mode & Solana Web3
+
+Build the Surgery UI. Use Anime.js to orchestrate the step-by-step progress bar and surgical tool dock sliding into view.
+
+Integrate the Solana wallet adapter.
+
+Build a "Mint Certificate" button that triggers a Devnet transaction upon surgery completion, accompanied by a celebratory Anime.js visual effect.
