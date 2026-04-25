@@ -16,21 +16,4 @@ router.get("/protected/session", requireAuth, (req, res) => {
   });
 });
 
-function phaseTwoPlaceholder(route) {
-  return (req, res) => {
-    const claims = getUserClaims(req);
-
-    res.status(501).json({
-      route,
-      message:
-        "Phase 2 integration is not implemented yet. Auth0 protection is active.",
-      sub: claims.sub,
-    });
-  };
-}
-
-router.post("/mentor", requireAuth, phaseTwoPlaceholder("/api/mentor"));
-router.post("/neuro-data", requireAuth, phaseTwoPlaceholder("/api/neuro-data"));
-router.post("/audio-guide", requireAuth, phaseTwoPlaceholder("/api/audio-guide"));
-
 export default router;
