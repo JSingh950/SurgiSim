@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import anime from "animejs";
 import { useAuth0 } from "@auth0/auth0-react";
 import BrainCanvas from "@/components/BrainCanvas.jsx";
+import SurgeryUI from "@/components/SurgeryUI.jsx";
+import MintCelebration from "@/components/MintCelebration.jsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +44,13 @@ export default function SurgerySimulator({
   const [status, setStatus] = useState(
     "Select a brain region to request Snowflake context and AI surgical guidance.",
   );
+
+  // Surgical flow state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedTool, setSelectedTool] = useState(null);
+  const [isSurgeryComplete, setIsSurgeryComplete] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [certificateData, setCertificateData] = useState(null);
 
   useEffect(() => {
     const audioElement = audioRef.current;
@@ -212,6 +221,11 @@ export default function SurgerySimulator({
       setMentorError(null);
       setStatus(`Guidance ready for the ${regionName}.`);
       await playAudioBlob(audioBlob);
+
+      // Auto-advance surgical step when guidance is received
+      if (currentStep < 8) {
+        setCurrentStep(prev => prev + 1);
+      }
     } catch (error) {
       if (nextController.signal.aborted) {
         return;
@@ -230,6 +244,69 @@ export default function SurgerySimulator({
       }
 
       setIsConsulting(false);
+    }
+  }
+
+  function handleStepComplete(nextStep) {
+    setCurrentStep(nextStep);
+  }
+
+  function handleToolSelect(tool) {
+    setSelectedTool(tool.id);
+    setStatus(`${tool.name} selected. Ready for ${tool.description.toLowerCase()}.`);
+  }
+
+  async function handleMintCertificate() {
+    try {
+      const headers = await createAuthorizedHeaders();
+
+      // Call the backend to mint the certificate
+      const response = await fetch(`${frontendEnv.apiBaseUrl}/api/mint-certificate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          userId: session?.sub,
+          userName: userLabel,
+          achievement: "Neurosurgical Mastery",
+          completedSteps: currentStep,
+          selectedRegion: selectedRegion,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCertificateData({
+          recipient: userLabel,
+          achievement: "Neurosurgical Mastery",
+          date: new Date().toLocaleDateString(),
+          tokenId: data.tokenId || "CERT-2024-001",
+          transactionId: data.transactionId,
+        });
+        setIsSurgeryComplete(true);
+        setShowCelebration(true);
+      } else {
+        console.error("Failed to mint certificate");
+        // Still show celebration for demo purposes
+        setCertificateData({
+          recipient: userLabel,
+          achievement: "Neurosurgical Mastery",
+          date: new Date().toLocaleDateString(),
+          tokenId: "DEMO-CERT-001",
+        });
+        setIsSurgeryComplete(true);
+        setShowCelebration(true);
+      }
+    } catch (error) {
+      console.error("Error minting certificate:", error);
+      // Show celebration anyway for demo
+      setCertificateData({
+        recipient: userLabel,
+        achievement: "Neurosurgical Mastery",
+        date: new Date().toLocaleDateString(),
+        tokenId: "DEMO-CERT-001",
+      });
+      setIsSurgeryComplete(true);
+      setShowCelebration(true);
     }
   }
 
@@ -386,6 +463,23 @@ export default function SurgerySimulator({
           </Card>
         </div>
       </div>
+
+      {/* Surgery UI Overlay */}
+      <SurgeryUI
+        currentStep={currentStep}
+        onStepComplete={handleStepComplete}
+        onToolSelect={handleToolSelect}
+        selectedTool={selectedTool}
+        isCompleted={isSurgeryComplete}
+        onMintCertificate={handleMintCertificate}
+      />
+
+      {/* Mint Celebration Modal */}
+      <MintCelebration
+        isOpen={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        certificateData={certificateData}
+      />
 
       <audio ref={audioRef} className="hidden" preload="auto" />
     </main>

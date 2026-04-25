@@ -1,7 +1,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
 import anime from "animejs";
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, useGLTF } from "@react-three/drei";
 
 const BRAIN_REGIONS = [
   {
@@ -313,4 +314,99 @@ function RegionGeometry({ type }) {
   }
 
   return <sphereGeometry args={[1, 40, 40]} />;
+}
+
+// Configuration for brain model source
+const BRAIN_MODEL_CONFIG = {
+  useRealModel: false, // Set to true when you have a real brain.glb
+  modelPath: "/models/brain.glb", // Path to real brain model
+  fallbackToGeometric: true, // Fall back to geometric shapes if model fails
+};
+
+function RealBrainModel({
+  modelPath,
+  isBusy,
+  onSelect,
+  selectedRegion,
+  fallback = true,
+}) {
+  const [error, setError] = useState(null);
+  const [loadedModel, setLoadedModel] = useState(null);
+
+  useEffect(() => {
+    try {
+      const model = useGLTF(modelPath);
+      setLoadedModel(model);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to load brain model:", err);
+      setError(err.message);
+      if (fallback) {
+        console.log("Falling back to geometric brain representation");
+      }
+    }
+  }, [modelPath, fallback]);
+
+  if (error && fallback) {
+    return (
+      <BrainAssembly
+        isBusy={isBusy}
+        onSelect={onSelect}
+        selectedRegion={selectedRegion}
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <mesh>
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshStandardMaterial color="#ff6b6b" wireframe />
+      </mesh>
+    );
+  }
+
+  if (!loadedModel) {
+    return (
+      <mesh>
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshStandardMaterial color="#4dd0ff" opacity={0.5} transparent wireframe />
+      </mesh>
+    );
+  }
+
+  return (
+    <group position={[0, 0.2, 0]} scale={[1.5, 1.5, 1.5]}>
+      <primitive
+        object={loadedModel.scene}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (onSelect && !isBusy) {
+            const clickedPart = event.object;
+            const regionName =
+              clickedPart.name ||
+              clickedPart.userData?.region ||
+              "Brain Region";
+            onSelect(regionName);
+          }
+        }}
+        onPointerOver={(event) => {
+          document.body.style.cursor = isBusy ? "default" : "pointer";
+          // Highlight effect on hover
+          if (event.object.material && !isBusy) {
+            event.object.material.emissive = new THREE.Color("#4dd0ff");
+            event.object.material.emissiveIntensity = 0.3;
+          }
+        }}
+        onPointerOut={(event) => {
+          document.body.style.cursor = "default";
+          // Remove highlight effect
+          if (event.object.material) {
+            event.object.material.emissive = new THREE.Color("#000000");
+            event.object.material.emissiveIntensity = 0;
+          }
+        }}
+      />
+    </group>
+  );
 }
