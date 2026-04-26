@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import anime from "animejs";
+import confetti from "canvas-confetti";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -31,6 +32,7 @@ export default function SurgerySimulator({
   const [isMinting, setIsMinting] = useState(false);
   const [mintResult, setMintResult] = useState(null);
   const [mintError, setMintError] = useState(null);
+  const [showCertModal, setShowCertModal] = useState(false);
   const mintBadgeRef = useRef(null);
   const overlayRef = useAnimeEntrance({
     variant: "panel",
@@ -271,6 +273,14 @@ export default function SurgerySimulator({
       }
 
       setMintResult(payload);
+      setShowCertModal(true);
+
+      confetti({
+        particleCount: 180,
+        spread: 100,
+        origin: { y: 0.45 },
+        colors: ["#79e9ff", "#5bffc8", "#a78bfa", "#facc15"],
+      });
 
       if (mintBadgeRef.current) {
         anime({
@@ -493,6 +503,49 @@ export default function SurgerySimulator({
       </div>
 
       <audio ref={audioRef} className="hidden" preload="auto" />
+
+      {showCertModal && mintResult && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowCertModal(false)}
+        >
+          <div
+            className="mx-4 w-full max-w-md rounded-3xl border border-cyan-300/20 bg-slate-950 p-8 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Badge variant="success" className="mb-4 w-fit text-sm">
+              Certificate Minted
+            </Badge>
+            <h2 className="text-2xl font-bold text-white">
+              Congratulations!
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-slate-300">
+              Your surgical completion certificate has been minted on Solana
+              Devnet.
+            </p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                Transaction Signature
+              </p>
+              <a
+                href={mintResult.explorer}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 block text-sm text-cyan-300 underline break-all"
+              >
+                {mintResult.signature}
+              </a>
+            </div>
+            <Button
+              className="mt-6 w-full"
+              size="lg"
+              onClick={() => setShowCertModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
