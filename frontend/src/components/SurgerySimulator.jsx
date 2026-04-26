@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import anime from "animejs";
 import confetti from "canvas-confetti";
-import { Check, Lock, AlertTriangle } from "lucide-react";
+import { Check, Lock, AlertTriangle, Syringe } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import BrainCanvas from "@/components/BrainCanvas.jsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+const SurgeryRoom = lazy(() => import("@/components/SurgeryRoom.jsx"));
 import {
   Card,
   CardContent,
@@ -43,6 +45,7 @@ export default function SurgerySimulator({
   const [showCertModal, setShowCertModal] = useState(false);
   const mintBadgeRef = useRef(null);
 
+  const [surgeryRoomActive, setSurgeryRoomActive] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedRegions, setCompletedRegions] = useState([]);
   const [isSurgeryComplete, setIsSurgeryComplete] = useState(false);
@@ -413,6 +416,26 @@ export default function SurgerySimulator({
   }
 
   return (
+    <>
+    {surgeryRoomActive && (
+      <Suspense fallback={
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#020711] text-cyan-100">
+          Loading surgery environment...
+        </div>
+      }>
+        <SurgeryRoom
+          getAccessTokenSilently={getAccessTokenSilently}
+          onExit={() => setSurgeryRoomActive(false)}
+          onSurgeryComplete={() => {
+            setIsSurgeryComplete(true);
+            setCompletedRegions(SURGERY_SEQUENCE.map((s) => s.region));
+            setCurrentStepIndex(SURGERY_SEQUENCE.length);
+            setMentorText("All surgical modules complete via immersive surgery room.");
+            setStatus("Surgery complete. You may now claim your certificate.");
+          }}
+        />
+      </Suspense>
+    )}
     <main className="relative min-h-screen overflow-hidden bg-[#020711] text-foreground">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(121,233,255,0.14),_transparent_22%),radial-gradient(circle_at_bottom_right,_rgba(91,255,200,0.12),_transparent_24%),linear-gradient(160deg,_rgba(2,7,17,0.96),_rgba(4,15,26,0.92))]" />
       <BrainCanvas
@@ -525,6 +548,15 @@ export default function SurgerySimulator({
                 disabled={isRequestingSession}
               >
                 {isRequestingSession ? "Refreshing Auth" : "Refresh Auth"}
+              </Button>
+              <Button
+                onClick={() => setSurgeryRoomActive(true)}
+                size="lg"
+                variant="default"
+                className="gap-2 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white hover:from-cyan-600 hover:to-emerald-600"
+              >
+                <Syringe className="h-4 w-4" />
+                Enter Surgery
               </Button>
               <Button onClick={onOpenProtocol} size="lg" variant="secondary">
                 Protocol
@@ -732,6 +764,7 @@ export default function SurgerySimulator({
         </div>
       )}
     </main>
+    </>
   );
 }
 
