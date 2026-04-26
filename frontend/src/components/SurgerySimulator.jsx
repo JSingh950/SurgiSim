@@ -17,6 +17,15 @@ import { useAnimeEntrance } from "@/hooks/use-anime-entrance";
 import { frontendEnv } from "@/lib/config";
 import { readMentorResponse } from "@/lib/mentor-response.js";
 
+const SURGICAL_TOOLS = [
+  { id: "scalpel", name: "Scalpel", icon: "🔪", description: "Precision cutting instrument" },
+  { id: "forceps", name: "Forceps", icon: "🥢", description: "Grasping and holding tissue" },
+  { id: "retractor", name: "Retractor", icon: "🔧", description: "Hold tissue away from surgical site" },
+  { id: "suction", name: "Suction", icon: "💨", description: "Remove fluids and maintain visibility" },
+  { id: "cautery", name: "Cautery", icon: "⚡", description: "Electrical hemostasis and cutting" },
+  { id: "microscope", name: "Microscope", icon: "🔬", description: "Magnified visualization" },
+];
+
 export default function SurgerySimulator({
   isRequestingSession,
   onLogout,
@@ -49,6 +58,9 @@ export default function SurgerySimulator({
   const [status, setStatus] = useState(
     "Select a brain region to request Snowflake context and AI surgical guidance.",
   );
+  const [selectedTool, setSelectedTool] = useState(null);
+  const [toolActive, setToolActive] = useState(false);
+  const [microscopeMode, setMicroscopeMode] = useState(false);
 
   useEffect(() => {
     const audioElement = audioRef.current;
@@ -299,6 +311,9 @@ export default function SurgerySimulator({
         isBusy={isConsulting}
         onSelect={handleRegionSelect}
         selectedRegion={selectedRegion}
+        selectedTool={selectedTool}
+        toolActive={toolActive}
+        microscopeMode={microscopeMode}
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-950/10 via-transparent to-slate-950/70" />
       <div className="clinical-grid absolute inset-0 opacity-20" />
@@ -361,6 +376,78 @@ export default function SurgerySimulator({
                 value={sessionError ? sessionError : session?.message ?? "Awaiting secure handshake."}
               />
               <TelemetryField label="Audio State" value={audioState} />
+            </CardContent>
+          </Card>
+
+          <Card className="pointer-events-auto border-cyan-300/15 bg-slate-950/52">
+            <CardHeader>
+              <Badge className="w-fit">Surgical Tools</Badge>
+              <CardTitle className="text-2xl">3D Tool Interface</CardTitle>
+              <CardDescription>
+                Select a tool to enable surgical animations and effects
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                {SURGICAL_TOOLS.map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => setSelectedTool(selectedTool === tool.id ? null : tool.id)}
+                    className={`rounded-2xl border p-3 text-left transition-all ${
+                      selectedTool === tool.id
+                        ? "border-cyan-400 bg-cyan-950/50 shadow-lg shadow-cyan-500/20"
+                        : "border-white/10 bg-white/5 hover:border-cyan-300/30 hover:bg-cyan-950/20"
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">{tool.icon}</div>
+                    <div className="text-xs font-semibold uppercase text-slate-300">
+                      {tool.name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {selectedTool && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={toolActive ? "default" : "outline"}
+                    onClick={() => setToolActive(!toolActive)}
+                  >
+                    {toolActive ? "Deactivate Tool" : "Activate Tool"}
+                  </Button>
+
+                  {selectedTool === "microscope" && (
+                    <Button
+                      size="sm"
+                      variant={microscopeMode ? "default" : "outline"}
+                      onClick={() => setMicroscopeMode(!microscopeMode)}
+                    >
+                      {microscopeMode ? "Exit Zoom" : "Enter Zoom"}
+                    </Button>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedTool(null);
+                      setToolActive(false);
+                      setMicroscopeMode(false);
+                    }}
+                  >
+                    Clear Tools
+                  </Button>
+                </div>
+              )}
+
+              <div className="text-xs text-slate-400">
+                <p><strong>Selected:</strong> {selectedTool || "None"}</p>
+                <p><strong>Status:</strong> {toolActive ? "Active" : "Standby"}</p>
+                {selectedTool === "microscope" && (
+                  <p><strong>Zoom Mode:</strong> {microscopeMode ? "Enabled" : "Disabled"}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
