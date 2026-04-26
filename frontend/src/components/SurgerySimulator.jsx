@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import anime from "animejs";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import BrainCanvas from "@/components/BrainCanvas.jsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,11 @@ export default function SurgerySimulator({
   userLabel,
 }) {
   const { getAccessTokenSilently } = useAuth0();
+  const { publicKey: walletPublicKey, connected: walletConnected } = useWallet();
+  const [isMinting, setIsMinting] = useState(false);
+  const [mintResult, setMintResult] = useState(null);
+  const [mintError, setMintError] = useState(null);
+  const mintBadgeRef = useRef(null);
   const overlayRef = useAnimeEntrance({
     variant: "panel",
     selector: "[data-sim-item]",
@@ -233,6 +240,58 @@ export default function SurgerySimulator({
     }
   }
 
+  async function handleMintCertificate() {
+    if (!walletPublicKey) {
+      setMintError("Connect a Solana wallet first.");
+      return;
+    }
+
+    setIsMinting(true);
+    setMintError(null);
+    setMintResult(null);
+
+    try {
+      const headers = await createAuthorizedHeaders();
+
+      const response = await fetch(
+        `${frontendEnv.apiBaseUrl}/api/mint-certificate`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            targetWallet: walletPublicKey.toBase58(),
+          }),
+        },
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Certificate minting failed.");
+      }
+
+      setMintResult(payload);
+
+      if (mintBadgeRef.current) {
+        anime({
+          targets: mintBadgeRef.current,
+          scale: [0.6, 1.15, 1],
+          opacity: [0, 1],
+          duration: 900,
+          easing: "easeOutElastic(1, 0.5)",
+        });
+      }
+    } catch (error) {
+      setMintError(
+        error instanceof Error
+          ? error.message
+          : "Certificate minting failed.",
+      );
+    } finally {
+      setIsMinting(false);
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#020711] text-foreground">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(121,233,255,0.14),_transparent_22%),radial-gradient(circle_at_bottom_right,_rgba(91,255,200,0.12),_transparent_24%),linear-gradient(160deg,_rgba(2,7,17,0.96),_rgba(4,15,26,0.92))]" />
@@ -302,6 +361,52 @@ export default function SurgerySimulator({
                 value={sessionError ? sessionError : session?.message ?? "Awaiting secure handshake."}
               />
               <TelemetryField label="Audio State" value={audioState} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 pt-4 xl:grid-cols-[1fr]">
+          <Card
+            data-sim-item
+            className="pointer-events-auto border-cyan-300/15 bg-slate-950/58"
+          >
+            <CardHeader>
+              <Badge variant="success" className="w-fit">
+                Solana Devnet Certificate
+              </Badge>
+              <CardTitle className="text-2xl">On-chain certification</CardTitle>
+              <CardDescription>
+                Connect your Phantom wallet and claim a Devnet certificate after
+                completing a surgical module.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-4">
+              <WalletMultiButton />
+              <Button
+                size="lg"
+                disabled={!walletConnected || isMinting || !mentorText}
+                onClick={handleMintCertificate}
+              >
+                {isMinting ? "Minting..." : "Claim Certificate"}
+              </Button>
+              {mintResult && (
+                <div ref={mintBadgeRef} className="flex flex-col gap-1">
+                  <Badge variant="success" className="w-fit">
+                    Certificate Minted
+                  </Badge>
+                  <a
+                    href={mintResult.explorer}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-cyan-300 underline break-all"
+                  >
+                    {mintResult.signature}
+                  </a>
+                </div>
+              )}
+              {mintError && (
+                <p className="text-sm text-red-300">{mintError}</p>
+              )}
             </CardContent>
           </Card>
         </div>

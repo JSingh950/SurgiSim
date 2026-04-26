@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Auth0Provider } from "@auth0/auth0-react";
 import App from "./App";
+import SolanaProvider from "@/components/SolanaProvider";
 import { frontendEnv } from "@/lib/config";
 import "./index.css";
 
@@ -16,7 +17,9 @@ const application = frontendEnv.isConfigured ? (
       audience: frontendEnv.auth0Audience,
     }}
   >
-    <App />
+    <SolanaProvider>
+      <App />
+    </SolanaProvider>
   </Auth0Provider>
 ) : (
   <App />

@@ -4,19 +4,11 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(moduleDirectory, "../../..");
 
-const dotenvCandidates = [
-  resolve(process.cwd(), ".env"),
-  resolve(process.cwd(), "../.env"),
-  resolve(repoRoot, ".env"),
-];
-
-for (const candidate of dotenvCandidates) {
-  if (existsSync(candidate)) {
-    dotenv.config({ path: candidate });
-    break;
-  }
+// Pinned to C:\dev\SurgiSim\.env regardless of cwd
+const envPath = resolve(moduleDirectory, "../../../.env");
+if (existsSync(envPath)) {
+  dotenv.config({ path: envPath });
 }
 
 const firstDefined = (...values) => values.find((value) => Boolean(value)) ?? "";
@@ -62,6 +54,8 @@ export const env = {
   snowflakeTokenType: process.env.SNOWFLAKE_TOKEN_TYPE ?? "",
   snowflakeRagTable: process.env.SNOWFLAKE_RAG_TABLE ?? "",
   snowflakeRagQuery: process.env.SNOWFLAKE_RAG_QUERY ?? "",
+  solanaCertificateSecret: process.env.SOLANA_CERTIFICATE_SECRET ?? "",
+  solanaRpcUrl: process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com",
 };
 
 export function getMissingAuth0Env() {
@@ -86,6 +80,12 @@ export function getMissingElevenLabsEnv() {
   return [
     !env.elevenLabsApiKey && "ELEVENLABS_API_KEY",
     !env.elevenLabsVoiceId && "ELEVENLABS_VOICE_ID",
+  ].filter(Boolean);
+}
+
+export function getMissingSolanaEnv() {
+  return [
+    !env.solanaCertificateSecret && "SOLANA_CERTIFICATE_SECRET",
   ].filter(Boolean);
 }
 

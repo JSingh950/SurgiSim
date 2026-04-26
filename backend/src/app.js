@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { env } from "./config/env.js";
 import audioGuideRouter from "./routes/audio-guide.js";
+import certificateRouter from "./routes/certificate.js";
 import healthRouter from "./routes/health.js";
 import mentorRouter from "./routes/mentor.js";
 import neuroDataRouter from "./routes/neuro-data.js";
@@ -24,6 +25,7 @@ export function createApp() {
   app.use("/api", neuroDataRouter);
   app.use("/api", mentorRouter);
   app.use("/api", audioGuideRouter);
+  app.use("/api", certificateRouter);
 
   app.use((_req, res) => {
     res.status(404).json({

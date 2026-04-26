@@ -1,0 +1,57 @@
+{
+  "model": "claude-sonnet-4-6",
+  "maxOutputTokens": 8192,
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "Bash(npm install*)",
+      "Bash(npm run*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git push*)",
+      "Bash(git pull*)",
+      "Bash(git branch*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git rm --cached*)",
+      "Bash(git rebase*)",
+      "Bash(gh pr*)",
+      "Bash(gh repo*)",
+      "Bash(curl*)",
+      "Bash(node*)",
+      "Bash(mkdir*)",
+      "Bash(cp*)",
+      "Bash(mv*)",
+      "Bash(type*)",
+      "Bash(dir*)",
+      "Bash(echo*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(cat .env*)",
+      "Bash(type .env*)",
+      "Bash(echo .env*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git -C C:/dev/SurgiSim status --short"
+          }
+        ]
+      }
+    ]
+  }
+}
