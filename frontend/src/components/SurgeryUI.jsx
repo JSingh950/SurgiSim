@@ -161,10 +161,10 @@ export default function SurgeryUI({
   return (
     <div
       ref={uiRef}
-      className="pointer-events-none fixed inset-0 z-20 flex flex-col justify-between p-4 md:p-6"
+      className="pointer-events-none fixed inset-0 z-20"
     >
       {/* Top Bar - Progress */}
-      <div data-surgery-item className="pointer-events-auto">
+      <div data-surgery-item className="pointer-events-auto absolute top-4 left-4 right-4">
         <Card className="border-cyan-300/20 bg-slate-950/80 backdrop-blur-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4">
@@ -193,7 +193,7 @@ export default function SurgeryUI({
       </div>
 
       {/* Middle - Surgical Steps */}
-      <div data-surgery-item className="pointer-events-auto mx-auto max-w-md">
+      <div data-surgery-item className="pointer-events-auto absolute top-20 right-4 max-w-xs max-h-[60vh] overflow-y-auto">
         <Card className="border-cyan-300/20 bg-slate-950/80 backdrop-blur-md">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Surgical Protocol</CardTitle>
@@ -243,7 +243,7 @@ export default function SurgeryUI({
       </div>
 
       {/* Bottom - Tool Dock */}
-      <div data-surgery-item className="pointer-events-auto">
+      <div data-surgery-item className="pointer-events-auto absolute bottom-4 left-1/2 transform -translate-x-1/2">
         <Card className="border-cyan-300/20 bg-slate-950/80 backdrop-blur-md">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4">

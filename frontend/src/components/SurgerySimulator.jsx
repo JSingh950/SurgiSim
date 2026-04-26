@@ -313,17 +313,19 @@ export default function SurgerySimulator({
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#020711] text-foreground">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(121,233,255,0.14),_transparent_22%),radial-gradient(circle_at_bottom_right,_rgba(91,255,200,0.12),_transparent_24%),linear-gradient(160deg,_rgba(2,7,17,0.96),_rgba(4,15,26,0.92))]" />
-      <BrainCanvas
-        isBusy={isConsulting}
-        onSelect={handleRegionSelect}
-        selectedRegion={selectedRegion}
-      />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-950/10 via-transparent to-slate-950/70" />
+      <div className="absolute inset-0 z-0 pointer-events-auto">
+        <BrainCanvas
+          isBusy={isConsulting}
+          onSelect={handleRegionSelect}
+          selectedRegion={selectedRegion}
+        />
+      </div>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-950/5 via-transparent to-slate-950/20" />
       <div className="clinical-grid absolute inset-0 opacity-20" />
 
       <div
         ref={overlayRef}
-        className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-between px-4 py-4 md:px-6 md:py-6"
+        className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-between px-4 py-4 md:px-6 md:py-6 pointer-events-none"
       >
         <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <Card
