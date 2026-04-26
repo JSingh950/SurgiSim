@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import anime from "animejs";
 import confetti from "canvas-confetti";
+import { Check, Lock, AlertTriangle } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -18,6 +19,13 @@ import { useAnimeEntrance } from "@/hooks/use-anime-entrance";
 import { frontendEnv } from "@/lib/config";
 import { readMentorResponse } from "@/lib/mentor-response.js";
 
+const SURGERY_SEQUENCE = [
+  { region: "Frontal Lobe", description: "Performing anterior craniotomy — retracting dura to expose the prefrontal cortex for tumor resection." },
+  { region: "Parietal Lobe", description: "Navigating the central sulcus — mapping somatosensory boundaries to preserve motor function." },
+  { region: "Temporal Lobe", description: "Accessing the Sylvian fissure — isolating the superior temporal gyrus for epileptic focus ablation." },
+  { region: "Occipital Lobe", description: "Approaching the calcarine sulcus — decompressing the visual cortex while preserving optic radiation fibers." },
+];
+
 export default function SurgerySimulator({
   isRequestingSession,
   onLogout,
@@ -34,6 +42,15 @@ export default function SurgerySimulator({
   const [mintError, setMintError] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
   const mintBadgeRef = useRef(null);
+
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [completedRegions, setCompletedRegions] = useState([]);
+  const [isSurgeryComplete, setIsSurgeryComplete] = useState(false);
+  const [hudNotification, setHudNotification] = useState(null);
+  const progressBarRef = useRef(null);
+  const hudRef = useRef(null);
+  const stepLabelRef = useRef(null);
+  const hudNotifTimeoutRef = useRef(null);
   const overlayRef = useAnimeEntrance({
     variant: "panel",
     selector: "[data-sim-item]",
@@ -152,7 +169,79 @@ export default function SurgerySimulator({
     }
   }
 
+  function showHudNotif(message, type) {
+    clearTimeout(hudNotifTimeoutRef.current);
+    setHudNotification({ message, type });
+
+    if (hudRef.current) {
+      anime.remove(hudRef.current);
+      anime({
+        targets: hudRef.current,
+        backgroundColor: type === "error"
+          ? ["rgba(255,60,60,0.25)", "rgba(255,60,60,0)"]
+          : ["rgba(0,243,255,0.25)", "rgba(0,243,255,0)"],
+        duration: 800,
+        easing: "easeOutExpo",
+      });
+    }
+
+    hudNotifTimeoutRef.current = setTimeout(() => setHudNotification(null), 3500);
+  }
+
+  function animateProgressBar(stepIndex) {
+    if (!progressBarRef.current) return;
+    const pct = ((stepIndex + 1) / SURGERY_SEQUENCE.length) * 100;
+    anime({
+      targets: progressBarRef.current,
+      width: `${pct}%`,
+      duration: 800,
+      easing: "easeOutExpo",
+    });
+  }
+
+  function animateStepLabelSlide() {
+    if (!stepLabelRef.current) return;
+    anime({
+      targets: stepLabelRef.current,
+      translateX: [40, 0],
+      opacity: [0, 1],
+      duration: 600,
+      easing: "easeOutExpo",
+    });
+  }
+
+  async function callVoiceCoaching(text, headers) {
+    try {
+      const audioResponse = await fetch(
+        `${frontendEnv.apiBaseUrl}/api/audio-guide`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ text }),
+        },
+      );
+
+      if (audioResponse.ok) {
+        const blob = await audioResponse.blob();
+        await playAudioBlob(blob);
+      }
+    } catch {
+      // Fail silently — voice coaching is non-critical
+    }
+  }
+
   async function handleRegionSelect(regionName) {
+    if (isSurgeryComplete) return;
+
+    const expectedRegion = SURGERY_SEQUENCE[currentStepIndex]?.region;
+
+    if (regionName !== expectedRegion) {
+      showHudNotif(`INCORRECT REGION: Access denied to ${regionName}. Select ${expectedRegion}.`, "error");
+      return;
+    }
+
+    const stepData = SURGERY_SEQUENCE[currentStepIndex];
+
     setSelectedRegion(regionName);
     setIsConsulting(true);
     setMentorError(null);
@@ -214,13 +303,34 @@ export default function SurgerySimulator({
         return;
       }
 
-      setMentorText(
-        metadata?.mentorText ??
-          `Guidance received for the ${regionName}, but no text payload was returned.`,
-      );
+      const guidanceText = metadata?.mentorText
+        ?? stepData.description
+        ?? `Guidance received for the ${regionName}.`;
+
+      setMentorText(guidanceText);
       setMentorError(null);
-      setStatus(`Guidance ready for the ${regionName}.`);
+      setStatus(`Step ${currentStepIndex + 1} of ${SURGERY_SEQUENCE.length} complete — ${regionName}.`);
       await playAudioBlob(audioBlob);
+
+      // Step 4 — AI voice coaching via /api/audio-guide
+      callVoiceCoaching(guidanceText, headers);
+
+      // Mark step complete
+      const nextCompleted = [...completedRegions, regionName];
+      setCompletedRegions(nextCompleted);
+      animateProgressBar(currentStepIndex);
+      showHudNotif(`${regionName} — procedure complete.`, "success");
+
+      const nextIndex = currentStepIndex + 1;
+
+      if (nextIndex >= SURGERY_SEQUENCE.length) {
+        setIsSurgeryComplete(true);
+        setMentorText(guidanceText);
+        setStatus("All surgical modules complete. You may now claim your certificate.");
+      } else {
+        setCurrentStepIndex(nextIndex);
+        setTimeout(animateStepLabelSlide, 100);
+      }
     } catch (error) {
       if (nextController.signal.aborted) {
         return;
@@ -313,6 +423,81 @@ export default function SurgerySimulator({
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-950/10 via-transparent to-slate-950/70" />
       <div className="clinical-grid absolute inset-0 opacity-20" />
 
+      {/* Surgery HUD Overlay */}
+      <div
+        ref={hudRef}
+        className="pointer-events-auto absolute left-4 top-4 z-30 w-72 rounded-2xl border border-cyan-300/15 bg-slate-950/80 p-4 backdrop-blur-md md:left-6 md:top-6"
+      >
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+          Surgery Progress
+        </p>
+
+        {/* Progress bar */}
+        <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            ref={progressBarRef}
+            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400"
+            style={{ width: `${(completedRegions.length / SURGERY_SEQUENCE.length) * 100}%` }}
+          />
+        </div>
+
+        {/* Step list */}
+        <ul className="space-y-2">
+          {SURGERY_SEQUENCE.map((step, idx) => {
+            const isCompleted = completedRegions.includes(step.region);
+            const isCurrent = idx === currentStepIndex && !isSurgeryComplete;
+            const isLocked = idx > currentStepIndex && !isCompleted;
+
+            return (
+              <li
+                key={step.region}
+                ref={isCurrent ? stepLabelRef : undefined}
+                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                  isCurrent
+                    ? "bg-cyan-400/10 text-cyan-100"
+                    : isCompleted
+                      ? "text-emerald-300/90"
+                      : "text-slate-500"
+                }`}
+              >
+                {isCompleted ? (
+                  <Check className="h-4 w-4 shrink-0 text-emerald-400" />
+                ) : isLocked ? (
+                  <Lock className="h-4 w-4 shrink-0 text-slate-600" />
+                ) : (
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-cyan-400/50 text-[10px] text-cyan-400">
+                    {idx + 1}
+                  </span>
+                )}
+                <span>{step.region}</span>
+              </li>
+            );
+          })}
+        </ul>
+
+        {isSurgeryComplete && (
+          <div className="mt-3 rounded-lg bg-emerald-400/10 px-3 py-2 text-xs font-medium text-emerald-300">
+            All modules complete — certificate available
+          </div>
+        )}
+
+        {/* HUD notification */}
+        {hudNotification && (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-xs font-medium ${
+              hudNotification.type === "error"
+                ? "bg-red-400/10 text-red-300"
+                : "bg-cyan-400/10 text-cyan-200"
+            }`}
+          >
+            {hudNotification.type === "error" && (
+              <AlertTriangle className="mr-1 inline h-3 w-3" />
+            )}
+            {hudNotification.message}
+          </div>
+        )}
+      </div>
+
       <div
         ref={overlayRef}
         className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col justify-between px-4 py-4 md:px-6 md:py-6"
@@ -394,7 +579,7 @@ export default function SurgerySimulator({
               <WalletMultiButton />
               <Button
                 size="lg"
-                disabled={!walletConnected || isMinting || !mentorText}
+                disabled={!walletConnected || isMinting || !isSurgeryComplete}
                 onClick={handleMintCertificate}
               >
                 {isMinting ? "Minting..." : "Claim Certificate"}
